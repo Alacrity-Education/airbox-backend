@@ -1,5 +1,7 @@
-const { influxDB, queryApi } = require("../config/influxdb");
 const { Point } = require("@influxdata/influxdb-client");
+const { influxDB, INFLUX_ORG, INFLUX_BUCKET } = require("../config/influxdb");
+
+const queryApi = influxDB.getQueryApi(INFLUX_ORG);
 
 exports.insertData = async (req, res) => {
   try {
@@ -9,7 +11,7 @@ exports.insertData = async (req, res) => {
       return res.status(400).json({ error: "Measurement and fields are required" });
     }
 
-    const writeApi = influxDB.getWriteApi(process.env.INFLUX_ORG, process.env.INFLUX_BUCKET);
+    const writeApi = influxDB.getWriteApi(INFLUX_ORG, INFLUX_BUCKET);
     const point = new Point(measurement);
 
     for (const key in fields) {
@@ -41,7 +43,7 @@ exports.getData = async (req, res) => {
     }
 
     const query = `
-      from(bucket: "${process.env.INFLUX_BUCKET}")
+      from(bucket: "${INFLUX_BUCKET}")
         |> range(start: ${start}, stop: ${stop})
         |> filter(fn: (r) => r._measurement == "${measurement}")
     `;
@@ -72,7 +74,7 @@ exports.deleteData = async (req, res) => {
       return res.status(400).json({ error: "Measurement is required" });
     }
 
-    const writeApi = influxDB.getWriteApi(process.env.INFLUX_ORG, process.env.INFLUX_BUCKET);
+    const writeApi = influxDB.getWriteApi(INFLUX_ORG, INFLUX_BUCKET);
     const point = new Point(measurement);
 
     if (tags) {
