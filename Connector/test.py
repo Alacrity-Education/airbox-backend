@@ -1,37 +1,53 @@
-# test_publisher.py
+# random_mqtt_publisher.py
+import os
+import logging
+
+logging.basicConfig(level=logging.DEBUG)
+
+
 import json
 import time
+import random
+from dotenv import load_dotenv
+from datetime import datetime
 import paho.mqtt.client as mqtt
+config = load_dotenv()
+# Load MQTT config
 
-BROKER = ""
-PORT =
-TOPIC = ""
-USERNAME = ""
-PASSWORD = ""
+BROKER = os.getenv('MQTT_BROKER')
+PORT   = int(os.getenv('MQTT_PORT'))
+TOPIC  = os.getenv('MQTT_TOPIC')
+USER   = os.getenv('MQTT_USERNAME')
+PASSWD = os.getenv('MQTT_PASSWORD')
 
+# Connect
 client = mqtt.Client()
-client.username_pw_set(USERNAME, PASSWORD)
-
+client.username_pw_set(USER, PASSWD)
 client.connect(BROKER, PORT)
-client.loop_start()
 
-sample_data = {
-    "locationName": "Test Location",
-    "Location": [51.509865, -0.118092],
-    "StationID": "station_test_01",
-    "StationNickname": "Tester",
-    "SoftwareVersion": "1.0",
-    "Modules": ["mod1", "mod2"],
-    "Data": [
-        {"ModuleId": "mod1", "ModuleName": "Temperature", "Value": 22.5, "Timestamp": "2023-01-01T12:00:00Z"},
-        {"ModuleId": "mod2", "ModuleName": "Humidity", "Value": 45.0, "Timestamp": "2023-01-01T12:00:00Z"}
-    ]
-}
+# Helper to generate random payloads
+def generate_sample(station_id: str):
+    return {
+        "locationName": "TestSite",
+        "Location": [round(random.uniform(-90, 90), 6), round(random.uniform(-180, 180), 6)],
+        "StationID": station_id,
+        "StationNickname": f"Station_{station_id}",
+        "SoftwareVersion": "test",
+        "Data": [
+            {"ModuleId": "temp", "ModuleName": "Temperature", "Value": round(random.uniform(15, 30), 2), "Timestamp": datetime.utcnow().isoformat() + "Z"},
+            {"ModuleId": "hum",  "ModuleName": "Humidity",    "Value": round(random.uniform(30, 90), 2), "Timestamp": datetime.utcnow().isoformat() + "Z"}
+        ]
+    }
 
-payload = json.dumps(sample_data)
-client.publish(TOPIC, payload, qos=2)
-print(f"Published test message to {TOPIC}")
-
-time.sleep(2)
-client.loop_stop()
-client.disconnect()
+if __name__ == '__main__':
+    station_ids = ['station1', 'station2']
+    try:
+        while True:
+            for sid in station_ids:
+                payload = json.dumps(generate_sample(sid))
+                client.publish(TOPIC, payload, qos=2)
+                print(f"Published sample for {sid}")
+            time.sleep(5)
+    except KeyboardInterrupt:
+        print("Stopping publisher.")
+        client.disconnect()
